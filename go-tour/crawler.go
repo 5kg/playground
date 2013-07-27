@@ -20,10 +20,15 @@ type Record struct {
 func Crawl(url string, depth int, fetcher Fetcher) {
     visited := make(map[string] bool)
     num := 0
-    count:= make(chan bool)
+    done := make(chan bool)
     ch := make(chan Record)
     go func() { ch <- Record{ url, 0 } }()
     for {
+        // This is to channel ch
+        d := done
+        if len(ch) > 0 {
+            d = nil
+        }
         select {
         case rec := <- ch:
             if !visited[rec.Url] {
@@ -33,17 +38,17 @@ func Crawl(url string, depth int, fetcher Fetcher) {
                     body, urls, err := fetcher.Fetch(url)
                     if err != nil {
                         fmt.Println(err)
-                        count <- true
+                        done <- true
                         return
                     }
                     fmt.Printf("found: %s %q\n", url, body)
                     for _, u := range urls {
                         ch <- Record{ u, depth + 1 }
                     }
-                    count <- true
+                    done <- true
                 } (rec.Url, rec.Depth)
             }
-        case <- count:
+        case <- d:
             num--
             if num == 0 {
                 return
