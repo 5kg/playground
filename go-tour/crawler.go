@@ -10,50 +10,32 @@ type Fetcher interface {
     Fetch(url string) (body string, urls []string, err error)
 }
 
-type Record struct {
-    Url string
-    Depth int
-}
-
 // Crawl uses fetcher to recursively crawl
 // pages starting with url, to a maximum of depth.
 func Crawl(url string, depth int, fetcher Fetcher) {
     visited := make(map[string] bool)
-    num := 0
-    done := make(chan bool)
-    ch := make(chan Record)
-    go func() { ch <- Record{ url, 0 } }()
-    for {
-        // This is to channel ch
-        d := done
-        if len(ch) > 0 {
-            d = nil
-        }
-        select {
-        case rec := <- ch:
-            if !visited[rec.Url] {
-                visited[rec.Url] = true
+    todo := make(chan []string)
+    go func() { todo <- []string{ url } }()
+    num := 1
+    for num > 0 {
+        next := <- todo
+        for _, u := range next {
+            if !visited[u] {
                 num++
-                go func(url string, depth int) {
+                visited[u] = true
+                go func(url string) {
                     body, urls, err := fetcher.Fetch(url)
                     if err != nil {
                         fmt.Println(err)
-                        done <- true
+                        todo <- []string{}
                         return
                     }
                     fmt.Printf("found: %s %q\n", url, body)
-                    for _, u := range urls {
-                        ch <- Record{ u, depth + 1 }
-                    }
-                    done <- true
-                } (rec.Url, rec.Depth)
-            }
-        case <- d:
-            num--
-            if num == 0 {
-                return
+                    todo <- urls
+                } (u)
             }
         }
+        num--
     }
 }
 
