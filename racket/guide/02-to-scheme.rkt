@@ -29,8 +29,8 @@
 (define a-b-c+1-2-3 0)
 
 ;Function call
-(string-append "a" "b" "c")
-(number? 1)
+(string-append "a" "b" "c") ; "abc"
+(number? 1)                 ; #t
 (define (double v)
   ((if (string? v) string-append +) v v))
 
@@ -80,3 +80,73 @@
   (let* ([op *]
          [rst (op x y)])
     rst))
+
+;List
+(list "a" "b" "c" "d")
+(list 1 "abc")
+
+;List operations
+(define alist
+  (list 1 2 3))
+(length alist)          ; 3
+(list-ref alist 0)      ; 1
+(append alist (list 4)) ; '(1 2 3 4)
+(reverse alist)         ; '(3 2 1)
+(member 1 alist)        ; '(1 2 3)
+(member 0 alist)        ; #f
+(car alist)             ; 1
+(cdr alist)             ; '(2 3)
+(empty? alist)          ; #f
+(cons (car alist)
+      (cdr alist))      ; '(1 2 3)
+(cons 1 (cons 2 empty)) ; '(1 2)
+
+;Map, filter, fold
+(map (lambda (x) (* 2 x)) alist)                ; '(2 4 6)
+(andmap even? alist)                            ; #f
+(ormap even? alist)                             ; #t
+(filter even? alist)                            ; '(2)
+(foldl (lambda (elem sum) (+ sum elem))0 alist) ; 6
+
+;List iteration
+(define (my-length l)
+  (if (empty? l)
+      0
+      (+ 1 (my-length (cdr l)))))
+(define (my-map f l)
+  (if (empty? l)
+      l
+      (cons (f (car l)) (my-map f (cdr l)))))
+
+;Tail recursion
+(define (length-iter l)
+  (define (aux l acc)
+    (if (empty? l)
+        acc
+        (aux (cdr l) (+ acc 1))))
+  (aux l 0))
+(define (map-iter f l)
+  (define (aux l acc)
+    (if (empty? l)
+        (reverse acc)
+        (aux (cdr l) (cons (f (car l)) acc))))
+  (aux l empty))
+
+;Pair
+(cons 1 2)
+(pair? (cons 1 2)) ; #t
+(pair? (list 1 2)) ; #t
+
+;Quote
+;Turn a sequence of characters into lists, symbols, and constants
+(quote (1 2 3))
+'(1 2 3)
+(quote i-am-an-identifier) ; 'i-am-an-identifier
+(car (quote (a b)))        ; 'a
+(quote 42)                 ; 42
+(quote "string")           ; "string"
+(car ''test)               ; 'quote
+
+;Infix notation
+'(1 . < . 2)
+(1 . < . 2)
