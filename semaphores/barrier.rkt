@@ -8,13 +8,14 @@
 (define count 0)
 
 (define (barrier n)
-  ; increment count
   (semaphore-wait mutex)
+  ; increment count
   (set! count (+ count 1))
-  (semaphore-post mutex)
   ; if count equals number of threads, let go
   (when (= count n)
       (semaphore-post all-done))
+  (semaphore-post mutex)
+
   ; turnstile to avoid deadlock
   (semaphore-wait all-done)
   (semaphore-post all-done))
