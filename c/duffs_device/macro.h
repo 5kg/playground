@@ -3,6 +3,9 @@
 /*
  * A tiny library of C macro metaprogramming like Boost.Preprocessor.
  *
+ * Some techniques used here are very similar to C++ template meta-programming,
+ * say std::enable_if.
+ *
  * References:
  *   - http://stackoverflow.com/a/12540675/385436
  *   - https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
@@ -800,7 +803,7 @@
 #define IF_0(...)
 #define IF_1(...) __VA_ARGS__
 
-/* Recursive expansion: maximum recursion depth = 2^9 = 512 */
+/* Recursive expansion: maximum recursion depth is 2^9 = 512 */
 #define EXPAND(...)  EXPAND1(EXPAND1(__VA_ARGS__))
 #define EXPAND1(...) EXPAND2(EXPAND2(__VA_ARGS__))
 #define EXPAND2(...) EXPAND3(EXPAND3(__VA_ARGS__))
@@ -838,9 +841,9 @@
     macro(from, __VA_ARGS__) \
     IF(NOT(EQ(from, to))) ( \
         /*
-         * We need to defer recursive call twice here, one for REPEAT_FROM_DOWNTO_IMPL,
+         * We need to defer recursive call twice here, one for REPEAT_FROM_TO_IMPL,
          * one for IF's arguments.
-         * Also, we cannot use recursive macro directly. Here we use _REPEAT_FROM_DONW_TO
+         * Also, we cannot use recursive macro directly. Here we use _REPEAT_FROM_TO
          * instead.
          */ \
         OBSTRUCT(_REPEAT_FROM_TO_IMPL)()(INC(from), to, macro, __VA_ARGS__) \
