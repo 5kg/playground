@@ -17,8 +17,8 @@
 -3.14i
 
 ; Prefixes
-0.5    ; 0.5↲                                                                    
-#e0.5  ; 1/2↲                                                                    
+0.5    ; 0.5↲
+#e0.5  ; 1/2↲
 #i1/2  ; 0.5
 #b11   ; 3
 #o777  ; 511
@@ -123,3 +123,79 @@
 (define (foo #:hd hd #:tl tl)
   (string-append hd tl))
 (foo #:tl "b" #:hd "a") ; "ab"
+
+; = Pairs and Lists =
+(cons 1 2)       ; '(1 . 2)
+(car (cons 1 2)) ; 1
+(cdr (cons 1 2)) ; 2
+
+(pair? (cons 1 2))    ; #t
+(list? (cons 1 2))    ; #f
+(list? (cons 1 null)) ; #t
+
+(list 1 2)  ; '(1 2)
+(list* 1 2) ; '(1 . 2)
+
+; List Operations
+(map even? '(1 2 3))        ; '(#f #t #f)
+(for-each display '(1 2 3)) ; 123
+(andmap even? '(1 2 3))     ; #f
+(ormap even? '(1 2 3))      ; #t
+(filter even? '(1 2 3))     ; '(2)
+(foldl (λ (acc x) (+ acc x))
+       0
+       '(1 2 3))            ; 6
+
+(define mp (mcons 1 2)) ; {1 . 2}
+(pair? mp)              ; #f
+(mpair? mp)             ; #t
+(mcdr mp)               ; 2
+(set-mcar! mp 0)        ; {0 . 2}
+
+; = Vectors =
+#4(1 0) ; '#(1 0 0 0)
+(vector-ref #(a (b c)) 1) ; '(b c)
+(list->vector '(1 2 3)) ; '#(1 2 3)
+(vector->list #(1 2 3)) ; '(1 2 3)
+
+; = Hashes =
+(define ht (make-hash))
+(hash-set! ht "a" 'a)
+(hash-set! ht "b" 'b)
+(hash-ref ht "a")      ; 'a
+(hash-ref ht "c" #f)   ; #f
+
+(define imht (hash "a" 'a "b" 'b))
+(hash-ref imht "b")     ; 'b
+(hash-set imht "b" 'bb) ; '#hash(("a" . a) ("b" . bb))
+
+(define wht (make-weak-hash))
+(hash-set! wht (let [(x (gensym))] x) 1)
+(collect-garbage)
+(hash-count wht) ; 0
+
+(let [(x (gensym))] (hash-set! wht x x))
+(collect-garbage)
+(hash-count wht) ; 1
+
+(let [(x (gensym))] (hash-set! wht x (make-ephemeron x x)))
+(collect-garbage)
+(hash-count wht) ; 1
+
+; = Boxes =
+; Reference: http://srfi.schemers.org/srfi-111/srfi-111.html
+(define one (box 1)) ; '#&1
+(unbox one)          ; 1
+(set-box! one 2)     ; '#&2
+
+; = Void and Undefined =
+(list (void) (void 1 2)) ; '(#<void> #<void>)
+
+(define (strange)
+  (define x x)
+  x)
+(strange)     ; #<undefined>
+
+(letrec [(x y)
+         (y x)]
+  (list x y)) ; '(#<undefined> #<undefined>)
