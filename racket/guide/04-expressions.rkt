@@ -97,3 +97,135 @@
 (case-λ-test 1)     ; Case 2
 (case-λ-test 1 2)   ; Case 1
 (case-λ-test 1 2 3) ; Case 2
+
+; = Define =
+(define (func a [b "b"] #:c [c "c"] . rest)
+  (list a b c rest))
+(func "a")                       ; ("a" "b" "c" ())
+(func "a" "bb")                  ; ("a" "bb" "c" ())
+(func "a" "bb" "d" "e")          ; '("a" "bb" "c" ("d" "e"))
+(func "a" "bb" "d" "e" #:c "cc") ; '("a" "bb" "cc" ("d" "e"))
+
+; Curried Function
+(define (add c)
+  (lambda (x) (+ x c)))
+(define add-1 (add 1))
+(add-1 2) ; 3
+
+(define ((add-curry c) x)
+  (+ x c))
+(define add-2 (add-curry 2))
+(add-2 1) ; 3
+
+; Multiple Values and define-values
+(define (rat-multiply a1 b1 a2 b2)
+  (values (* a1 a2) (* b1 b2)))
+(rat-multiply 2 5 1 3) ; 2 \n 15
+(define-values (n d) (rat-multiply 2 5 1 3))
+(list n d)             ; '(2 15)
+
+; Internal Definitions
+(define (internal-def)
+  (define x 1)
+  (display x)
+  (define y (+ x 1))
+  (define z y)
+  (display z))
+(internal-def) ; 12
+
+; = Local Binding =
+; Parallel Binding: let
+(let [(x 1)
+      (y 2)]
+  (list x y)) ; '(1 2)
+
+(define avar "outside")
+(let [(avar "inside")
+      (v avar)]
+  v) ; "outside"
+
+; Sequential Binding: let*
+(let* [(avar "inside")
+      (v avar)]
+  v) ; "inside"
+
+(let* [(a "i am a")
+      (b a)]
+  b) ; "i am a"
+
+(let* [(a 1)
+      (a 2)]
+  a) ; 2
+
+; a let* form is equivalent to nested let forms
+(equal?
+ (let* ([a 1]
+        [b (+ a 1)])
+   (list a b))
+ (let ([a 1])
+   (let ([b (+ a 1)])
+   (list a b)))) ; #t
+
+; Recursive Binding: letrec
+(letrec
+    ([odd? (lambda (x) (if (= x 0) #f (even? (- x 1))))]
+     [even? (lambda (x) (if (= x 0) #t (odd? (- x 1))))])
+  (list (odd? 5) (even? 5) (odd? 4))) ; '(#t #f #f)
+
+(letrec ([x y]
+         [y 1])
+  (list x y)) ; '(#<undefined> 1)
+
+; Named let
+(define (map-iter f lst)
+  (let loop ([acc null] [lst lst])
+    (if (null? lst)
+        acc
+        (loop (cons (f (car lst)) acc)
+              (cdr lst)))))
+(map-iter even? '(1 2 3 4 5)) ; '(#f #t #f #t #f)
+
+(define (map-iter-letrec f lst)
+  (letrec ([loop (lambda (acc lst)
+                   (if (null? lst)
+                       acc
+                       (loop (cons (f (car lst)) acc)
+                             (cdr lst))))])
+    (loop null lst)))
+(map-iter-letrec even? '(1 2 3 4 5)) ; '(#f #t #f #t #f)
+
+; Multiple Values: let-values, let*-values, letrec-values
+(let-values ([(a b c) (values 1 2 3)])
+  (list a b c)) ; '(1 2 3)
+(let*-values ([(a b) (values 1 2)]
+              [(c) (+ a b)])
+  (list a b c)) ; '(1 2 3)
+
+; = Conditionals =
+(and #f (display "!!!")) ; #<void>
+(or #t (display "!!!")) ; #<void>
+
+; Tail-recursion
+(define (contains? lst elem)
+  (and (not (null? lst))
+       (or (equal? elem (car lst))
+           (contains? (cdr lst) elem))))
+(contains? '(1 2 3 4) 4) ; #t
+(contains? '(1 2 3 4) 0) ; #f
+
+(define (contains?-cond lst elem)
+  (cond [(null? lst) #f]
+        [(equal? (car lst) elem) #t]
+        [else (contains?-cond (cdr lst) elem)]))
+
+(contains?-cond '(1 2 3 4) 4) ; #t
+(contains?-cond '(1 2 3 4) 0) ; #f
+
+(define (odd-cond lst)
+  (cond
+    [(member 1 lst) => (lambda (lst) (apply + lst))]
+    [(member 2 lst)]
+    [(member 3 lst) "three"]))
+(odd-cond '(2 1 3)) ; 4
+(odd-cond '(2 3))   ; '(2 3)
+(odd-cond '(3))     ; "three"
