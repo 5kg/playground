@@ -229,3 +229,178 @@
 (odd-cond '(2 1 3)) ; 4
 (odd-cond '(2 3))   ; '(2 3)
 (odd-cond '(3))     ; "three"
+
+; = Sequencing =
+((lambda ()
+   (begin
+     (display "3")
+     (display "2")
+     (display "1")
+     (display "go")))) ; 321go
+
+; Implicit begin
+(define (ready-set-go v)
+  (cond [(= v 0)
+         (display "Ready?")
+         (display "Set")
+         (display "Go!")]))
+(ready-set-go 0) ; Ready?SetGo!
+
+; Splicing
+(let ([a 0])
+  (begin
+    (define b (+ 1 a))
+    (define c (+ 1 b)))
+  (list a b c)) ; (0 1 2)
+
+; begin0
+(define (i++ i)
+  (begin0
+    (unbox i)
+    (set-box! i (+ 1 (unbox i)))))
+(define (++i i)
+  (begin
+    (set-box! i (+ 1 (unbox i)))
+    (unbox i)))
+
+(define ival (box 0))
+(begin (display (unbox ival))
+       (display (i++ ival))
+       (display (++i ival))
+       (display (unbox ival))) ; 0022
+
+; when, unless
+(define (for-each-when f lst)
+  (when (not (empty? lst))
+    (f (car lst))
+    (for-each f (cdr lst))))
+(define (for-each-unless f lst)
+  (unless (empty? lst)
+    (f (car lst))
+    (for-each f (cdr lst))))
+(for-each-when display '(1 2 3))   ; 123
+(for-each-unless display '(1 2 3)) ; 123
+
+; = Assignment: set! =
+(define coin 0)
+(define (flip)
+  (set! coin (- 1 coin)))
+coin (flip) coin (flip) coin ; 0 1 0
+
+(define x 'x)
+(define y 'y)
+(set!-values (x y) (values y x))
+(list x y) ; '(y x)
+
+; = Quoting =
+; Mainly used for symbols and lists, which have other meanings when not quoted.
+(quote ((1 2 3) #("a" b) . the-end)) ; '((1 2 3) #("a" b) . the-end)
+'((1 2 3) #("a" b) . the-end)        ; '((1 2 3) #("a" b) . the-end)
+(quote (quote (quote me)))           ; '''me
+
+; = Quasiquoting =
+(quasiquote (1 2 (unquote (+ 1 2)) (unquote (- 5 1)))) ; '(1 2 3 4)
+
+(define (matryoshka depth)
+  (if (zero? depth)
+      0
+      (quasiquote ((unquote depth) (unquote (matryoshka (- depth 1)))))))
+(matryoshka 10) ; '(10 (9 (8 (7 (6 (5 (4 (3 (2 (1 0))))))))))
+
+(define (num->var n) (string->symbol (format "x~a" n)))
+
+(define (build-sum-exp n)
+  (nested-lets n (nested-sum n)))
+
+(define (nested-lets n body)
+  (if (zero? n)
+      body
+      (quasiquote (let ([(unquote (num->var n)) (unquote n)])
+                    (unquote (nested-lets (- n 1) body))))))
+
+(define (nested-sum n)
+  (if (= n 1)
+      (num->var 1)
+      (quasiquote (+ (unquote (num->var n))
+                     (unquote (nested-sum (- n 1)))))))
+
+(build-sum-exp 3) ; '(let ((x3 3)) (let ((x2 2)) (let ((x1 1)) (+ x3 (+ x2 x1)))))
+(eval (build-sum-exp 100) (make-base-namespace)) ; 5050
+
+; unquote-splicing
+(quasiquote (1 2 (unquote-splicing (list (+ 1 2) (- 5 1))))) ; '(1 2 3 4)
+(define (silly n)
+  (if (zero? n)
+      '(0)
+      (quasiquote ((unquote n) (unquote-splicing (silly (- n 1)))))))
+(silly 10) ; '(10 9 8 7 6 5 4 3 2 1 0)
+
+(define (build-sum-exp-new n)
+  (build-lets n (quasiquote
+                 (+ (unquote-splicing (build-list n (λ (x) (num->var (+ x 1)))))))))
+
+(define (build-lets n body)
+  (quasiquote (let (unquote
+                    (build-list n
+                                (λ (x) (quasiquote [(unquote (num->var (+ x 1)))
+                                                    (unquote (+ x 1))]))))
+              (unquote body))))
+
+(build-sum-exp-new 3) ; '(let ((x1 1) (x2 2) (x3 3)) (+ x1 x2 x3))
+(eval (build-sum-exp-new 100) (make-base-namespace)) ; 5050
+
+; Shorthand notation
+`(1 2 ,(+ 2 1) ,(+ 0 4))        ; '(1 2 3 4)
+`(1 2 ,@(list (+ 1 2) (+ 0 4))) ; '(1 2 3 4)
+
+; Nested Quasiquoting
+(quasiquote (1 2 (quasiquote (unquote (+ 1 2)))))           ; '(1 2 `,(+ 1 2))
+(quasiquote (1 2 (unquote (quasiquote (unquote (+ 1 2)))))) ; '(1 2 3)
+(quasiquote (1 2 (quasiquote (unquote (unquote (+ 1 2)))))) ; '(1 2 `,3)
+(quasiquote (1 2
+               (quasiquote
+                ((unquote (+ 1 2))
+                 (unquote (unquote (- 5 1)))))))            ; '(1 2 `(,(+ 1 2) ,4))
+; = Simple Dispatch: case =
+(let ([v (random 6)])
+    (printf "~a\n" v)
+    (case v
+      [(0) 'zero]
+      [(1) 'one]
+      [(2) 'two]
+      [(3 4 5) 'many]))
+
+; = Dynamic Binding: parameterize =
+(define color (make-parameter "red"))
+(color)                            ; "red"
+(parameterize ([color "green"])
+  (list
+   (color)
+   (parameterize
+       ([color "blue"]) (color)))) ; '("green" "blue")
+(color)                            ; "red"
+
+; A parameterize form adjusts the value of a parameter during the
+; whole time that the parameterize body is evaluated.
+(define (get-color)
+  (color))
+(parameterize ([color "black"])
+  (get-color))   ; "black"
+
+(let ([local-color
+       (parameterize ([color "black"])
+         (lambda () (color)))])
+  (local-color)) ; "red"
+
+(color "brown")
+(color)          ; "brown"
+
+(parameterize ([color "red"])
+  (list
+   (color)
+   (begin
+     (color "black")
+     (color))))  ; '("red" "black")
+(color)          ; "brown"
+
+; Parameters are thread-safe.
