@@ -96,3 +96,49 @@
 (autop 1 2)  ; (autop 1 2 #f)
 (struct autopp (x y [z #:auto]) #:transparent #:auto-value 0)
 (autopp 1 2) ; (autopp 1 2 0)
+
+; Constructor guard
+(struct guard-point (x y)
+  #:guard (lambda (x y type-name)
+            (if (and (number? x)
+                     (number? y))
+                (values x y)
+                (error type-name "bad arguments given"))))
+(guard-point 1 1)
+;(guard-point 1 'a) <- guard-point: bad arguments given
+
+(struct guard-point-3d guard-point (z)
+  #:guard (lambda (x y z type-name)
+            (if (number? z)
+                (values x y z)
+                (error type-name "bad z given"))))
+(guard-point-3d 1 1 1)
+; (guard-point-3d 1 'a 1) <- guard-point-3d: bad arguments given
+; (guard-point-3d 1 'a 'b) <- guard-point-3d: bad z given
+
+; Generic interface
+(struct pretty-point (x y)
+  #:methods gen:custom-write
+  [(define (write-proc p port mode)
+     (fprintf port "(~a ~a)"
+              (pretty-point-x p)
+              (pretty-point-y p)))])
+
+(pretty-point 1 1) ; (1 1)
+
+; Property
+(struct property-point (x y)
+  #:property prop:procedure
+  (lambda (self z)
+    (list (property-point-x self)
+          (property-point-y self)
+          z)))
+(define point-z-axix (property-point 0 0))
+(point-z-axix 10) ; '(0 0 10)
+
+; Super
+(struct s (a) #:transparent)
+(struct ss s (b) #:transparent)
+(struct sss (c) #:super struct:ss #:transparent)
+
+(sss 1 2 3) ; (sss 1 2 3)
