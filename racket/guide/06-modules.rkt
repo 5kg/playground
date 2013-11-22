@@ -72,3 +72,59 @@
     (display "I am module 'part7-2'")))
 
 (require (submod 'part7 part7-2)) ; I am module 'part7' I am module 'part7-1' I am module 'part7-2-1' I am module 'part7-2'
+
+; more on require
+(module part8 racket
+  (provide a b c)
+  (define a #t)
+  (define b #t)
+  (define c #t))
+
+(require (only-in 'part8 a))
+a ; #t
+
+(require (only-in 'part8 [a aa]))
+aa ; #t
+
+(require (except-in 'part8 a b))
+c ; #t
+
+(require (rename-in 'part8 [c cc]))
+cc ; #t
+
+(require (prefix-in part8- 'part8))
+part8-c ; #t
+
+(require (prefix-in part8: (except-in 'part8 c)))
+part8:a ; #t
+
+; more on provide
+(module part9 racket
+  (provide (struct-out pos))
+  (provide (rename-out (pos pos1)))
+  (provide (except-out (all-defined-out) pos))
+  (provide (prefix-out part9: (all-defined-out)))
+
+  (module sub racket
+    (provide part9:sub:foo)
+    (define part9:sub:foo #t))
+  (require (submod "." sub))
+  (provide (all-from-out 'sub))
+
+  (struct pos (x y)))
+
+(require 'part9)
+part9:pos
+part9:sub:foo
+
+; assignment
+(module part10 racket
+  (provide counter increment!)
+  (define counter 0)
+  (define (increment!) (set! counter (+ 1 counter))))
+
+(require 'part10)
+counter ; 0
+(increment!)
+counter ; 1
+; (set! counter 2) <=  set!: cannot mutate module-required identifier in: counter
