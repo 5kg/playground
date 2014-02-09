@@ -1,7 +1,7 @@
-/* 
+/*
  * Demo of a general object counter with CRTP idiom.
  *
- * Reference: 
+ * Reference:
  *   http://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
  *   http://www.drdobbs.com/cpp/counting-objects-in-c
  */
@@ -27,7 +27,7 @@ public:
 protected:
 	Counter()
 	{
-		++num_created;		
+		++num_created;
 		++num_alive;
 	}
 
@@ -56,7 +56,7 @@ class AA : private Counter<AA>, public A {
 };
 
 int main(int argc, char const *argv[])
-{	
+{
 	/* Prevent create instance of Counter class */
 	// Counter<A> p;                       -> error: calling a protected constructor of class 'Counter<A>'
 	// Counter<A> *pca = new Counter<A>(); -> error: calling a protected constructor of class 'Counter<A>'
@@ -69,7 +69,7 @@ int main(int argc, char const *argv[])
 	A a0;
 	B b0;
 	{ A a1, a2; }
-	
+
 	assert(Counter<A>::created() == 3);
 	assert(Counter<A>::alive() == 1);
 	assert(Counter<B>::created() == 1);
